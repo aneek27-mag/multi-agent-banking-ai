@@ -1,36 +1,31 @@
 interface MetricCardProps {
-  label: string;
+  title: string;
   value: string;
-  change?: string;
-  positive?: boolean;
+  insight: string;
+  isActive?: boolean;
 }
 
-export default function MetricCard({
-  label,
-  value,
-  change,
-  positive,
-}: MetricCardProps) {
+export default function MetricCard({ title, value, insight, isActive = false }: MetricCardProps) {
   return (
-    <div className="glass rounded-lg p-5">
-      <div className="text-xs font-medium tracking-wider text-slate-500">
-        {label}
-      </div>
-
-      <div className="mt-3 text-3xl font-semibold tracking-tight text-white">
-        {value}
-      </div>
-
-      {change && (
-        <div
-          className={`mt-2 text-xs ${
-            positive ? "text-emerald-400" : "text-slate-400"
-          }`}
-        >
-          {change}
+    <div className={`p-6 flex flex-col justify-between h-40 ${isActive ? 'glass-panel-active' : 'glass-panel'}`}>
+      <div className="flex justify-between items-start">
+        <h3 className="text-on-surface-variant text-xs font-bold tracking-widest uppercase">
+          {title}
+        </h3>
+        {/* Placeholder icon */}
+        <div className="w-6 h-6 rounded bg-surface-bright flex items-center justify-center text-xs text-primary">
+          📊
         </div>
-      )}
+      </div>
+      
+      <div>
+        <div className="text-3xl font-bold text-white tracking-tight">
+          {value}
+        </div>
+        <div className="text-xs font-medium text-[#00ff9d] mt-2 flex items-center gap-2">
+          <span>↑</span> {insight}
+        </div>
+      </div>
     </div>
   );
 }
-
