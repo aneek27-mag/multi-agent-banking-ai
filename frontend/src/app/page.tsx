@@ -1,155 +1,316 @@
-'use client';
+"use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import { useState } from "react";
 
-type Msg = { role: 'user' | 'agent'; content: string };
-type Audit = { agent: string; event: string; details?: string };
-type Result = { status: string;[key: string]: any };
+export default function Home() {
+  const [active, setActive] = useState("Overview");
 
-const API = 'http://localhost:8000';
-const demoUser = 'demo_user';
+  return (
+    <div className="min-h-screen bg-[#07122a] text-[#e2e2e6]">
+      {/* Sidebar */}
+      <aside className="fixed left-0 top-0 h-screen w-64 border-r border-white/10 bg-[#07122a]/80 backdrop-blur-xl">
+        <div className="p-6">
+          <div className="text-xl font-bold tracking-tight text-[#00e5ff]">
+            NEXUS
+          </div>
 
-const agents = [
-  ['Triage Agent', 'Intent'],
-  ['KYC & Onboarding', 'Identity'],
-  ['Wealth & Securities', 'Demat / Equity'],
-  ['Core Banking', 'Funds'],
-  ['Forex & Remittance', 'FX'],
-  ['Risk & Compliance', 'Rules'],
-  ['Authorization Gateway', 'HITL'],
-  ['Execution Agent', 'Commit'],
-];
-
-export default function Dashboard() {
-  const [messages, setMessages] = useState<Msg[]>([]);
-  const [input, setInput] = useState('');
-  const [audit, setAudit] = useState<Audit[]>([]);
-  const [auth, setAuth] = useState(false);
-  const [pin, setPin] = useState('');
-  const [result, setResult] = useState<Result | null>(null);
-  const [active, setActive] = useState('Triage Agent');
-  const end = useRef<HTMLDivElement>(null);
-
-  useEffect(() => end.current?.scrollIntoView({ behavior: 'smooth' }), [messages]);
-
-  const ask = async () => {
-    if (!input.trim() || auth) return;
-    const text = input; setInput('');
-    setMessages(m => [...m, { role: 'user', content: text }]);
-    try {
-      const r = await fetch(`${API}/api/chat/stream`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, user_id: demoUser }) });
-      if (!r.body) throw new Error('No stream');
-      const reader = r.body.getReader(); const dec = new TextDecoder();
-      setMessages(m => [...m, { role: 'agent', content: '' }]);
-      while (true) {
-        const { value, done } = await reader.read(); if (done) break;
-        for (const line of dec.decode(value).split('\n')) {
-          if (!line.startsWith('data: ')) continue;
-          const d = JSON.parse(line.slice(6));
-          if (d.type === 'audit') {
-            setAudit(a => [
-              ...a,
-              {
-                agent: String(d.agent),
-                event: String(d.event),
-                details: d.details == null
-                  ? undefined
-                  : typeof d.details === 'string'
-                    ? d.details
-                    : JSON.stringify(d.details)
-              }
-            ]);
-            setActive(String(d.agent));
-          }
-          if (d.type === 'token') setMessages(m => { const n = [...m]; n[n.length - 1].content += d.content; return n });
-          if (d.type === 'auth_required') { setAuth(true); }
-          if (d.type === 'result') { setResult(d.result); setMessages(m => { const n = [...m]; n[n.length - 1].content = resultText(d.result); return n }); }
-          if (d.type === 'error') setMessages(m => { const n = [...m]; n[n.length - 1].content = 'System error: ' + d.content; return n });
-        }
-      }
-    } catch (e) { setMessages(m => [...m, { role: 'agent', content: 'Backend unavailable. Start FastAPI on port 8000.' }]) }
-  };
-
-  const authorize = async () => {
-    const r = await fetch(`${API}/api/chat/authorize`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: demoUser, m_pin: pin }) });
-    if (!r.ok) { alert('Invalid sandbox M-PIN. Use 1234.'); setPin(''); return; }
-    const d = await r.json(); setAuth(false); setPin(''); setResult(d.result);
-    setAudit(a => [...a, { agent: 'Authorization Gateway', event: 'M-PIN verified' }, {
-      agent: 'Execution Agent', event: 'transaction committed', details: typeof d.result === 'string'
-        ? d.result
-        : JSON.stringify(d.result)
-    }]);
-    setMessages(m => [...m, { role: 'agent', content: resultText(d.result) }]);
-  };
-
-  return <main className="min-h-screen bg-slate-100 text-slate-900">
-    <header className="h-16 bg-slate-950 text-white px-6 flex items-center justify-between">
-      <div><div className="font-semibold tracking-wide">NEXUS BANK AI</div><div className="text-xs text-slate-400">Autonomous Multi-Agent Banking • SIH PS-04</div></div>
-      <div className="flex gap-2 text-xs"><span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300">KYC VERIFIED</span><span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-300">SANDBOX</span></div>
-    </header>
-
-    <section className="grid lg:grid-cols-[1.1fr_.9fr] min-h-[calc(100vh-4rem)]">
-      <div className="bg-white border-r border-slate-200 flex flex-col">
-        <div className="p-5 border-b border-slate-200">
-          <div className="text-sm font-semibold">Universal Financial Assistant</div>
-          <div className="text-xs text-slate-500 mt-1">Banking + Demat + Equity + compliant FX in one journey</div>
-          <div className="grid grid-cols-3 gap-2 mt-4">
-            <Quick label="Open Demat" text="Open a Demat account using my verified KYC" onClick={setInput} />
-            <Quick label="Buy Shares" text="Buy 10 shares of TCS" onClick={setInput} />
-            <Quick label="Trade FX" text="BUY 1000 USD" onClick={setInput} />
+          <div className="mt-1 text-xs tracking-[0.2em] text-[#8e9099]">
+            BANK AI
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto p-6 space-y-3">
-          {messages.length === 0 && <div className="max-w-lg mx-auto mt-16 text-center text-slate-400"><div className="text-4xl mb-3">◈</div><p className="font-medium text-slate-600">One interface. Multiple financial workflows.</p><p className="text-sm mt-2">Try opening a Demat account, buying shares directly from the bank balance, linking an existing BO ID, or running a compliant FX sandbox trade.</p></div>}
-          {messages.map((m, i) => <div key={i} className={`max-w-xl p-4 rounded-2xl ${m.role === 'user' ? 'ml-auto bg-slate-950 text-white' : 'bg-slate-100 border border-slate-200'}`}>{m.content}</div>)}
-          <div ref={end} />
-        </div>
-        <div className="p-4 border-t bg-slate-50 flex gap-2">
-          <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && ask()} disabled={auth} className="flex-1 rounded-xl border border-slate-300 bg-white p-3 outline-none focus:ring-2 focus:ring-slate-900" placeholder="Ask Nexus Bank AI..." />
-          <button onClick={ask} disabled={auth} className="px-5 rounded-xl bg-slate-950 text-white disabled:opacity-40">Send</button>
-        </div>
-      </div>
 
-      <aside className="bg-slate-950 text-white p-5 overflow-y-auto">
-        <div className="flex justify-between items-center"><h2 className="font-semibold">Agent Orchestration</h2><span className="text-xs text-slate-500">LIVE TRACE</span></div>
-        <div className="grid grid-cols-2 gap-2 mt-4">
-          {agents.map(([name, desc]) => <div key={name} className={`rounded-xl border p-3 ${active === name ? 'border-emerald-400 bg-emerald-400/10' : 'border-slate-800 bg-slate-900'}`}>
-            <div className="text-xs font-semibold">{name}</div><div className="text-[10px] text-slate-500 mt-1">{desc}</div>
-          </div>)}
-        </div>
-        {result && <div className="mt-5 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4"><div className="text-xs uppercase text-emerald-300">Transaction Result</div><pre className="mt-2 whitespace-pre-wrap text-xs text-slate-200">{JSON.stringify(result, null, 2)}</pre></div>}
-        <div className="mt-5">
-          <div className="text-xs text-slate-500 mb-2">AUDIT LOG</div>
-          <div className="space-y-2 font-mono text-xs">
-            {audit.slice(-30).map((a, i) => (
-              <div
-                key={i}
-                className="border-l-2 border-slate-700 pl-3"
-              >
-                <span className="text-emerald-400">{a.agent}</span>
-                <span className="text-slate-400">→ {a.event}</span>
-                {a.details !== undefined && (
-                  <div className="text-slate-600 mt-1">
-                    {a.details}
-                  </div>
-                )}
-              </div>
-            ))}</div>
+        <nav className="mt-8 space-y-1 px-3">
+          {[
+            "Overview",
+            "AI Assistant",
+            "Accounts",
+            "Investments",
+            "Transactions",
+            "Security",
+          ].map((item) => (
+            <button
+              key={item}
+              onClick={() => setActive(item)}
+              className={`w-full rounded-lg px-4 py-3 text-left text-sm transition ${
+                active === item
+                  ? "border-l-2 border-[#00e5ff] bg-[#334a50]/60 text-[#00e5ff]"
+                  : "text-[#c4c6d0] hover:bg-white/5"
+              }`}
+            >
+              {item}
+            </button>
+          ))}
+        </nav>
+
+        <div className="absolute bottom-6 left-4 right-4 rounded-xl border border-white/10 bg-[#1c2841]/40 p-4 backdrop-blur-xl">
+          <div className="text-xs text-[#8e9099]">AI SYSTEM</div>
+          <div className="mt-2 flex items-center gap-2 text-sm">
+            <span className="h-2 w-2 rounded-full bg-[#00e5ff] shadow-[0_0_15px_rgba(0,229,255,0.7)]" />
+            Quantum Core Active
+          </div>
         </div>
       </aside>
-    </section>
 
-    {auth && <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="w-full max-w-sm rounded-3xl bg-white p-7 shadow-2xl">
-        <div className="text-2xl">🔐</div><h3 className="text-xl font-semibold mt-3">Authorize transaction</h3>
-        <p className="text-sm text-slate-500 mt-2">The agent workflow has paused before a sensitive action. This is the human-in-the-loop checkpoint.</p>
-        <input autoFocus type="password" maxLength={4} value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, ''))} className="mt-5 w-full text-center tracking-[.8em] text-2xl border rounded-xl p-3" placeholder="••••" />
-        <button onClick={authorize} className="w-full mt-3 p-3 rounded-xl bg-slate-950 text-white">Verify & Execute</button>
-        <div className="text-[11px] text-slate-400 mt-3 text-center">Sandbox M-PIN: 1234</div>
-      </div>
-    </div>}
-  </main>
+      {/* Main */}
+      <main className="ml-64 min-h-screen px-8 pb-12 pt-8">
+        {/* Top bar */}
+        <header className="mb-8 flex items-center justify-between">
+          <div>
+            <div className="text-xs tracking-[0.2em] text-[#8e9099]">
+              FINANCIAL INTELLIGENCE CENTER
+            </div>
+
+            <h1 className="mt-2 text-3xl font-semibold">
+              Good evening, Aneek
+            </h1>
+
+            <p className="mt-2 text-sm text-[#c4c6d0]">
+              Your financial intelligence center is ready.
+            </p>
+          </div>
+
+          <div className="rounded-full border border-[#00e5ff]/30 bg-[#004e58]/40 px-4 py-2 text-xs text-[#97f0ff]">
+            ● AI ONLINE
+          </div>
+        </header>
+
+        {/* Metrics */}
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <Metric
+            title="NET WORTH"
+            value="₹8,42,500"
+            change="↑ 4.8% this month"
+          />
+
+          <Metric
+            title="INVESTMENTS"
+            value="₹3,21,400"
+            change="↑ 12.4%"
+          />
+
+          <Metric
+            title="AVAILABLE BALANCE"
+            value="₹2,14,800"
+            change="Savings ••••4921"
+          />
+
+          <div className="rounded-xl border border-white/10 bg-[#1c2841]/40 p-5 backdrop-blur-xl">
+            <div className="text-xs tracking-wider text-[#8e9099]">
+              FINANCIAL SCORE
+            </div>
+
+            <div className="mt-3 flex items-center gap-4">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-[#00e5ff] shadow-[0_0_15px_rgba(0,229,255,0.3)]">
+                <span className="text-xl font-semibold text-[#97f0ff]">
+                  82
+                </span>
+              </div>
+
+              <div>
+                <div className="font-medium">Excellent</div>
+                <div className="mt-1 text-xs text-[#8e9099]">
+                  +6 points this month
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* AI section */}
+        <section className="mt-6 grid gap-6 xl:grid-cols-2">
+          {/* Quantum Core */}
+          <div className="rounded-xl border border-white/10 bg-[#1c2841]/40 p-6 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.37)]">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs tracking-wider text-[#8e9099]">
+                  QUANTUM AI CORE
+                </div>
+
+                <h2 className="mt-2 text-xl font-semibold">
+                  Banking Intelligence
+                </h2>
+              </div>
+
+              <span className="rounded-full bg-[#004e58] px-3 py-1 text-xs text-[#97f0ff]">
+                ACTIVE
+              </span>
+            </div>
+
+            <div className="flex min-h-[280px] items-center justify-center">
+              <div className="relative flex h-48 w-48 items-center justify-center rounded-full border border-[#00e5ff]/50 shadow-[0_0_60px_rgba(0,229,255,0.25)]">
+                <div className="absolute h-36 w-36 rounded-full border border-[#00e5ff]/30 shadow-[0_0_40px_rgba(0,229,255,0.2)]" />
+
+                <div className="absolute h-24 w-24 rounded-full bg-[#00e5ff]/20 shadow-[0_0_40px_rgba(0,229,255,0.4)]" />
+
+                <div className="z-10 text-center">
+                  <div className="text-2xl font-bold text-[#97f0ff]">
+                    AI
+                  </div>
+                  <div className="mt-1 text-[10px] tracking-widest text-[#8e9099]">
+                    PROCESSING
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-white/10 bg-[#030d25]/60 p-4">
+              <div className="text-xs text-[#8e9099]">
+                CURRENT INSIGHT
+              </div>
+
+              <p className="mt-2 text-sm text-[#c4c6d0]">
+                Your investment allocation is performing above your
+                monthly target. Consider maintaining your current
+                diversification strategy.
+              </p>
+            </div>
+          </div>
+
+          {/* AI Insights */}
+          <div className="rounded-xl border border-white/10 bg-[#1c2841]/40 p-6 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.37)]">
+            <div className="text-xs tracking-wider text-[#8e9099]">
+              AI INSIGHTS
+            </div>
+
+            <h2 className="mt-2 text-xl font-semibold">
+              Financial Intelligence
+            </h2>
+
+            <div className="mt-6 space-y-4">
+              <Insight
+                title="Cash Flow"
+                text="Your monthly cash flow is healthy and trending upward."
+              />
+
+              <Insight
+                title="Investment"
+                text="Equity exposure is slightly below your recommended target."
+              />
+
+              <Insight
+                title="Savings"
+                text="You are on track to exceed your monthly savings goal."
+              />
+
+              <Insight
+                title="Risk"
+                text="Portfolio risk remains within your preferred range."
+              />
+            </div>
+
+            <button className="mt-6 w-full rounded-lg bg-[#00e5ff] px-4 py-3 text-sm font-semibold text-[#00363d] shadow-[0_0_15px_rgba(0,229,255,0.3)] transition hover:brightness-110">
+              OPEN AI FINANCIAL ADVISOR
+            </button>
+          </div>
+        </section>
+
+        {/* Recent activity */}
+        <section className="mt-6 rounded-xl border border-white/10 bg-[#1c2841]/40 p-6 backdrop-blur-xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-xs tracking-wider text-[#8e9099]">
+                RECENT ACTIVITY
+              </div>
+
+              <h2 className="mt-2 text-xl font-semibold">
+                Transaction Intelligence
+              </h2>
+            </div>
+
+            <button className="text-xs text-[#00e5ff]">
+              VIEW ALL
+            </button>
+          </div>
+
+          <div className="mt-5 space-y-3">
+            <Transaction
+              name="Amazon"
+              type="Card Payment"
+              amount="-₹2,499"
+            />
+
+            <Transaction
+              name="Salary Credit"
+              type="Income"
+              amount="+₹85,000"
+            />
+
+            <Transaction
+              name="Zerodha"
+              type="Investment"
+              amount="-₹10,000"
+            />
+          </div>
+        </section>
+      </main>
+    </div>
+  );
 }
 
-function Quick({ label, text, onClick }: { label: string; text: string; onClick: (s: string) => void }) { return <button onClick={() => onClick(text)} className="rounded-lg border border-slate-200 bg-slate-50 p-2 text-left hover:bg-slate-100"><div className="text-xs font-semibold">{label}</div><div className="text-[10px] text-slate-500 mt-1">{text}</div></button> }
-function resultText(r: Result) { if (!r) return ''; if (r.status === 'blocked') return `⛔ Blocked: ${r.reason}`; if (r.status === 'needs_input') return r.message || 'More information required.'; if (r.status === 'success') return `✅ Completed successfully. ${r.order_id || r.trade_id || r.bo_id ? 'Reference: ' + (r.order_id || r.trade_id || r.bo_id) : ''}`; return r.message || JSON.stringify(r) }
+function Metric({
+  title,
+  value,
+  change,
+}: {
+  title: string;
+  value: string;
+  change: string;
+}) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-[#1c2841]/40 p-5 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.37)]">
+      <div className="text-xs tracking-wider text-[#8e9099]">
+        {title}
+      </div>
+
+      <div className="mt-4 text-2xl font-semibold">
+        {value}
+      </div>
+
+      <div className="mt-2 text-xs text-[#97f0ff]">
+        {change}
+      </div>
+    </div>
+  );
+}
+
+function Insight({
+  title,
+  text,
+}: {
+  title: string;
+  text: string;
+}) {
+  return (
+    <div className="rounded-lg border border-white/10 bg-[#030d25]/50 p-4">
+      <div className="flex items-center gap-2">
+        <span className="h-2 w-2 rounded-full bg-[#00e5ff] shadow-[0_0_10px_rgba(0,229,255,0.6)]" />
+        <div className="text-sm font-medium">{title}</div>
+      </div>
+
+      <p className="mt-2 text-sm leading-6 text-[#c4c6d0]">
+        {text}
+      </p>
+    </div>
+  );
+}
+
+function Transaction({
+  name,
+  type,
+  amount,
+}: {
+  name: string;
+  type: string;
+  amount: string;
+}) {
+  return (
+    <div className="flex items-center justify-between rounded-lg border border-white/10 bg-[#030d25]/50 p-4">
+      <div>
+        <div className="text-sm font-medium">{name}</div>
+        <div className="mt-1 text-xs text-[#8e9099]">{type}</div>
+      </div>
+
+      <div className="text-sm font-medium">{amount}</div>
+    </div>
+  );
+}

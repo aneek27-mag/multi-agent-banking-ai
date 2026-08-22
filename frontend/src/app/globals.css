@@ -1,0 +1,70 @@
+:root {
+  --surface: #07122a;
+  --surface-dim: #07122a;
+  --surface-bright: #2f3952;
+
+  --surface-container-lowest: #030d25;
+  --surface-container-low: #101b33;
+  --surface-container: #1c2841;
+  --surface-container-high: #2a364f;
+  --surface-container-highest: #3b4761;
+
+  --on-surface: #e2e2e6;
+  --on-surface-variant: #c4c6d0;
+
+  --outline: #8e9099;
+  --outline-variant: #44474e;
+
+  --primary: #00e5ff;
+  --on-primary: #00363d;
+  --primary-container: #004e58;
+  --on-primary-container: #97f0ff;
+
+  --secondary: #b1cbd1;
+  --secondary-container: #334a50;
+
+  --tertiary: #bac6ea;
+
+  --error: #ffb4ab;
+
+  --glass-bg: rgba(28, 40, 65, 0.4);
+  --glass-border: rgba(255, 255, 255, 0.1);
+
+  --radius: 8px;
+}
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--surface);
+  color: var(--on-surface);
+  font-family: Inter, Arial, sans-serif;
+}
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
+}
+
+.glow-primary {
+  box-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--surface-container-high);
+  border-radius: 10px;
+}
