@@ -3,12 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
 from dotenv import load_dotenv
+import truststore
 
-# 1. Import the NEW SDK
-from google import genai
-from google.genai import types
+from openai import OpenAI
 
 load_dotenv()
+truststore.inject_into_ssl()
 
 app = FastAPI()
 
@@ -21,12 +21,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 3. Initialize the new Gemini Client securely
-api_key = os.getenv("GEMINI_API_KEY")
+# 3. Initialize the Groq client securely
+api_key = os.getenv("GROQ_API_KEY")
 if not api_key:
-    raise ValueError("GEMINI_API_KEY is missing. Please add it to your .env file.")
+    raise ValueError("GROQ_API_KEY is missing. Please add it to your .env file.")
 
-client = genai.Client(api_key=api_key)
+client = OpenAI(
+    api_key=api_key,
+    base_url="https://api.groq.com/openai/v1",
+)
 
 # Define the strict Quantum persona (but don't initialize a model yet)
 system_instruction = """
@@ -71,23 +74,24 @@ async def execute_protocol(request: CommandRequest):
     print(f"Executing protocol: {request.command}")
     return {"status": "success", "message": f"Protocol {request.command} initiated."}
 
-# 5. Intelligent AI Chatbot Endpoint (Using New SDK Syntax)
+# 5. Intelligent AI Chatbot Endpoint
 class ChatRequest(BaseModel):
     message: str
 
 @app.post("/api/chat")
 async def chat_endpoint(request: ChatRequest):
     try:
-        # Pass the model and config directly to generate_content
-        response = client.models.generate_content(
-            model='gemini-1.5-flash',
-            contents=request.message,
-            config=types.GenerateContentConfig(
-                system_instruction=system_instruction,
-            )
+        response = client.chat.completions.create(
+            model="openai/gpt-oss-20b",
+            messages=[
+                {"role": "system", "content": system_instruction},
+                {"role": "user", "content": request.message},
+            ],
+            temperature=0.2,
+            max_tokens=180,
         )
         
-        return {"reply": response.text}
+        return {"reply": response.choices[0].message.content or "No response was returned."}
     except Exception as e:
         print(f"AI Error: {e}")
         return {"reply": "My neural link to the Quantum Core is currently disrupted. Please verify my connection and try again."}
