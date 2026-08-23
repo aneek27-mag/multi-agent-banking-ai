@@ -1,317 +1,75 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { NexusAPI, ChatMessage } from '../lib/api';
-import Sidebar from '../components/layout/Sidebar';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowDownLeft, ArrowUpRight, Bot, Check, ChevronRight, CircleHelp, Clock3, CreditCard, Download, Landmark, Menu, MoreHorizontal, Plus, Search, Send, ShieldCheck, Sparkles, TrendingUp, Wallet, X } from 'lucide-react';
+import { ChatMessage, NexusAPI } from '../lib/api';
+
+const transactions = [
+  { merchant: 'Whole Foods Market', category: 'Groceries', date: 'Today, 9:42 AM', amount: '-$86.42', status: 'Completed', icon: CreditCard },
+  { merchant: 'Acme Payroll', category: 'Income', date: 'Aug 21, 8:00 AM', amount: '+$6,240.00', status: 'Completed', icon: ArrowDownLeft },
+  { merchant: 'Atlas Air', category: 'Travel', date: 'Aug 20, 6:18 PM', amount: '-$412.80', status: 'Completed', icon: ArrowUpRight },
+  { merchant: 'Rent transfer', category: 'Housing', date: 'Aug 18, 10:02 AM', amount: '-$2,100.00', status: 'Pending', icon: Landmark },
+];
 
 export default function Dashboard() {
-  // Nexus Score Animation State
-  const [animatedScore, setAnimatedScore] = useState(0);
-  const targetScore = 842;
-
-  // Chatbot State
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [chatInput, setChatInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { 
-      role: 'ai', 
-      content: "Welcome back, Alexander. I've analyzed your recent TSLA purchase. Would you like a risk assessment?", 
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
-    }
-  ]);
-  
+  const [messages, setMessages] = useState<ChatMessage[]>([{ role: 'ai', content: 'Good morning, Alexander. Your spending is 12% lower than this time last month.', timestamp: '9:05 AM' }]);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll chat to bottom
-  useEffect(() => {
-    if (chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages, isTyping, isChatOpen]);
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, isTyping]);
 
-  // Animate the Nexus Score on load
-  useEffect(() => {
-    const duration = 1500; // 1.5 seconds
-    const steps = 60;
-    const stepTime = duration / steps;
-    let currentStep = 0;
-
-    const timer = setInterval(() => {
-      currentStep++;
-      setAnimatedScore(Math.floor((targetScore / steps) * currentStep));
-      if (currentStep >= steps) {
-        setAnimatedScore(targetScore);
-        clearInterval(timer);
-      }
-    }, stepTime);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  // Handle sending messages to the backend
-  const handleSendMessage = async () => {
+  async function handleSendMessage() {
     if (!chatInput.trim() || isTyping) return;
-    
-    const newUserMsg: ChatMessage = {
-      role: 'user',
-      content: chatInput,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-    
-    // Optimistically add user message and set typing state
-    setMessages(prev => [...prev, newUserMsg]);
+    const content = chatInput.trim();
     setChatInput('');
+    setMessages((current) => [...current, { role: 'user', content, timestamp: 'Now' }]);
     setIsTyping(true);
-    
     try {
-      const res = await NexusAPI.sendMessage(newUserMsg.content);
-      
-      const newAiMsg: ChatMessage = {
-        role: 'ai',
-        content: res.reply,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages(prev => [...prev, newAiMsg]);
-    } catch (error) {
-      console.error("Chat error:", error);
-      // Optional: Add an error message to the chat if the backend fails
-      setMessages(prev => [...prev, { role: 'ai', content: "Error: Connection to Quantum Core lost.", timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
-    } finally {
-      setIsTyping(false);
-    }
-  };
+      const response = await NexusAPI.sendMessage(content);
+      setMessages((current) => [...current, { role: 'ai', content: response.reply, timestamp: 'Now' }]);
+    } catch {
+      setMessages((current) => [...current, { role: 'ai', content: 'I could not reach the banking service. Please try again shortly.', timestamp: 'Now' }]);
+    } finally { setIsTyping(false); }
+  }
 
-  return (
-    <div className="font-sans mesh-bg min-h-screen overflow-x-hidden selection:bg-[#00daf3] selection:text-[#00363d]">
-      <Sidebar />
-      
-      <main className="md:ml-64 min-h-screen flex flex-col relative z-10">
-        {/* TopAppBar */}
-        <header className="flex justify-between items-center px-8 py-4 sticky top-0 z-40 bg-[#07122a]/60 backdrop-blur-md border-b border-white/5">
-          <div className="flex items-center gap-6 flex-1">
-            <div className="relative w-full max-w-md hidden md:block group">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 transform -translate-y-1/2 text-[#bac9cc] group-focus-within:text-[#00daf3] transition-colors">search</span>
-              <input className="w-full bg-[#2a344e]/30 border border-white/10 rounded-full py-2 pl-10 pr-4 text-[#d9e2ff] text-sm focus:outline-none focus:border-[#00daf3] focus:bg-[#2a344e]/60 transition-all placeholder:text-[#bac9cc]/50 shadow-inner" placeholder="Query Quantum AI..." type="text"/>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <button className="w-10 h-10 rounded-full flex items-center justify-center text-[#bac9cc] hover:text-[#00daf3] bg-[#2a344e]/20 hover:bg-[#2a344e]/50 relative transition-all hover:scale-110">
-              <span className="material-symbols-outlined">notifications</span>
-              <span className="absolute top-2 right-2 w-2 h-2 bg-[#00daf3] rounded-full shadow-[0_0_8px_#00daf3] animate-pulse"></span>
-            </button>
-            <div className="w-10 h-10 rounded-full border border-[#00daf3]/30 overflow-hidden cursor-pointer hover:border-[#00daf3] hover:shadow-[0_0_15px_rgba(0,218,243,0.3)] transition-all ml-2">
-              <img alt="User Profile" className="w-full h-full object-cover" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Alexander&backgroundColor=07122a" />
-            </div>
-          </div>
-        </header>
+  return <div className="app-shell">
+    <aside className={`sidebar ${isMobileNavOpen ? 'sidebar-open' : ''}`}>
+      <div className="brand"><div className="brand-mark"><Sparkles size={17} /></div><span>Nexus</span><span className="brand-badge">Private</span></div>
+      <nav aria-label="Primary navigation" className="nav-list">
+        <p className="nav-label">Workspace</p>
+        <a className="nav-link active" href="#overview"><Wallet size={18} />Overview</a>
+        <a className="nav-link" href="#transactions"><CreditCard size={18} />Transactions</a>
+        <a className="nav-link" href="#investments"><TrendingUp size={18} />Investments</a>
+        <a className="nav-link" href="#security"><ShieldCheck size={18} />Security</a>
+        <p className="nav-label nav-label-spaced">Support</p>
+        <button className="nav-link" onClick={() => setIsChatOpen(true)}><Bot size={18} />AI concierge</button>
+        <button className="nav-link"><CircleHelp size={18} />Help center</button>
+      </nav>
+      <div className="sidebar-bottom"><div className="advisor-card"><div className="advisor-avatar">AM</div><div><strong>Alex Morgan</strong><span>Private client</span></div><MoreHorizontal size={17} /></div><button className="sign-out">Sign out</button></div>
+    </aside>
 
-        <div className="flex-1 p-8 flex flex-col gap-6 max-w-7xl mx-auto w-full">
-          {/* Hero Section */}
-          <section className="glass-panel rounded-xl overflow-hidden relative flex flex-col md:flex-row items-center group hover:border-white/20 transition-colors">
-            <div className="p-8 md:p-12 md:w-1/2 z-10 flex flex-col gap-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#d1bcff]/10 border border-[#d1bcff]/30 w-fit">
-                <span className="material-symbols-outlined text-[#d1bcff] text-[14px]">psychology</span>
-                <span className="font-mono text-xs text-[#d1bcff] uppercase tracking-widest">AI Core Active</span>
-              </div>
-              <h2 className="text-5xl text-[#d9e2ff] leading-tight font-bold">Welcome back, <br/><span className="text-gradient-cyan">Alexander</span>.</h2>
-              <p className="text-[#bac9cc]">Your AI is continuously optimizing your wealth across global markets.</p>
-            </div>
-            <div className="md:w-1/2 h-64 md:h-auto absolute right-0 top-0 bottom-0 opacity-40 group-hover:opacity-60 transition-opacity duration-700 pointer-events-none">
-              <div className="absolute inset-0 bg-gradient-to-r from-[rgba(42,52,78,0.4)] to-transparent z-10"></div>
-              <div className="w-full h-full bg-[#00daf3]/5 flex items-center justify-center">
-                 <div className="w-48 h-48 rounded-full border border-[#00daf3]/20 animate-[spin_10s_linear_infinite] flex items-center justify-center">
-                    <div className="w-32 h-32 rounded-full border border-[#d1bcff]/30 animate-[spin_7s_linear_infinite_reverse]"></div>
-                 </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Bento Grid Layout */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-            
-            <div className="md:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {/* Primary Account */}
-              <div className="glass-panel-glow rounded-xl p-6 flex flex-col relative overflow-hidden group cursor-pointer hover:-translate-y-1 transition-all duration-300">
-                <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#00daf3]/20 rounded-full blur-2xl group-hover:bg-[#00daf3]/30 group-hover:scale-150 transition-all duration-500"></div>
-                <div className="flex justify-between items-start mb-8 z-10">
-                  <div>
-                    <h3 className="font-mono text-sm text-[#bac9cc] uppercase tracking-wider mb-1">Primary Account</h3>
-                    <div className="flex items-center gap-1">
-                      <span className="text-3xl font-bold text-[#d9e2ff]">$124,500</span>
-                      <span className="text-[#bac9cc]">.00</span>
-                    </div>
-                  </div>
-                  <div className="w-10 h-10 rounded-full bg-[#2a344e]/50 flex items-center justify-center border border-white/10 group-hover:border-[#00daf3]/50 transition-colors">
-                    <span className="material-symbols-outlined text-[#00daf3]">account_balance</span>
-                  </div>
-                </div>
-                <div className="mt-auto z-10">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-mono text-[#bac9cc]">•••• 4829</span>
-                    <span className="text-[#4ade80] flex items-center gap-1 font-mono">
-                      <span className="material-symbols-outlined text-[14px]">arrow_upward</span> +2.4% this week
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Investment Portfolio */}
-              <div className="glass-panel rounded-xl p-6 flex flex-col relative overflow-hidden group cursor-pointer hover:-translate-y-1 hover:border-[#d1bcff]/50 transition-all duration-300">
-                <div className="flex justify-between items-start mb-8 z-10">
-                  <div>
-                    <h3 className="font-mono text-sm text-[#bac9cc] uppercase tracking-wider mb-1">Investment Portfolio</h3>
-                    <div className="flex items-center gap-1">
-                      <span className="text-3xl font-bold text-[#d9e2ff]">$450,230</span>
-                      <span className="text-[#bac9cc]">.15</span>
-                    </div>
-                  </div>
-                  <div className="w-10 h-10 rounded-full bg-[#2a344e]/50 flex items-center justify-center border border-white/10 group-hover:border-[#d1bcff]/50 transition-colors">
-                    <span className="material-symbols-outlined text-[#d1bcff]">show_chart</span>
-                  </div>
-                </div>
-                <div className="mt-auto z-10">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-mono text-[#bac9cc]">Quantum Alpha Fund</span>
-                    <span className="text-[#4ade80] flex items-center gap-1 font-mono">
-                      <span className="material-symbols-outlined text-[14px]">trending_up</span> +8.1% YTD
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* KYC Verification Hub */}
-            <div className="md:col-span-4 glass-panel rounded-xl p-6 flex flex-col border-l-2 border-l-[#00daf3] hover:bg-[#2a344e]/20 transition-colors">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold text-[#d9e2ff] flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[#00daf3]">fingerprint</span> KYC Hub
-                </h3>
-                <span className="font-mono text-xs text-[#4ade80] bg-[#4ade80]/10 px-2 py-1 rounded-full border border-[#4ade80]/30">Verified</span>
-              </div>
-              <div className="space-y-4">
-                <div className="flex items-center gap-4 p-3 bg-[#2a344e]/20 rounded-lg group">
-                  <div className="w-10 h-10 rounded-full bg-[#00daf3]/10 flex items-center justify-center group-hover:bg-[#00daf3]/20 transition-colors">
-                    <span className="material-symbols-outlined text-[#00daf3]">face</span>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-bold text-[#d9e2ff]">Biometric Match</p>
-                    <div className="w-full bg-white/5 h-1.5 rounded-full mt-2 overflow-hidden">
-                      <div className="bg-[#00daf3] h-full rounded-full w-[98%] shadow-[0_0_10px_#00daf3]"></div>
-                    </div>
-                  </div>
-                  <span className="font-mono text-[#00daf3]">98%</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Nexus Score */}
-            <div className="md:col-span-12 glass-panel rounded-xl p-6 border-t-2 border-t-[#00daf3] flex flex-col relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-[#00daf3]/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-              
-              <div className="flex items-center justify-between mb-6 z-10">
-                <h3 className="text-xl font-bold text-[#d9e2ff] flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[#00daf3]">analytics</span> Nexus Score
-                </h3>
-                <span className="font-mono text-xs text-[#4ade80] bg-[#4ade80]/10 px-3 py-1 rounded-full border border-[#4ade80]/30 shadow-[0_0_10px_rgba(74,222,128,0.2)]">Risk Level: Minimal</span>
-              </div>
-              
-              <div className="flex flex-col items-center justify-center py-4 relative z-10">
-                <div className="relative w-40 h-40 flex items-center justify-center group-hover:scale-105 transition-transform duration-500">
-                  <svg className="w-full h-full transform -rotate-90">
-                    <circle className="text-white/5" cx="80" cy="80" fill="transparent" r="70" stroke="currentColor" strokeWidth="6"></circle>
-                    <circle className="text-[#00daf3] shadow-[0_0_15px_#00daf3] transition-all duration-1000 ease-out" cx="80" cy="80" fill="transparent" r="70" stroke="currentColor" strokeDasharray="440" strokeDashoffset={440 - (440 * (animatedScore / 1000))} strokeWidth="6"></circle>
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-4xl text-[#d9e2ff] font-bold text-glow">{animatedScore}</span>
-                    <span className="font-mono text-xs text-[#bac9cc]/50 uppercase mt-1">Excellent</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
-
-      {/* Interactive AI Chatbot Widget */}
-      <div className="fixed bottom-8 right-8 z-50 flex flex-col items-end gap-4">
-        
-        {/* Chat Window */}
-        <div className={`w-80 md:w-96 glass-panel rounded-2xl overflow-hidden flex flex-col shadow-[0_0_30px_rgba(0,218,243,0.2)] border-[#00daf3]/30 transition-all duration-300 origin-bottom-right ${isChatOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'}`}>
-          <div className="p-4 bg-[#2a344e]/80 border-b border-white/10 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <span className="material-symbols-outlined text-[#00daf3]">smart_toy</span>
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#4ade80] rounded-full border-2 border-[#07122a]"></span>
-              </div>
-              <div>
-                <h4 className="font-mono text-sm text-[#d9e2ff]">Quantum AI Assistant</h4>
-                <p className="text-[10px] text-[#4ade80] uppercase tracking-widest">{isTyping ? 'Typing...' : 'Online'}</p>
-              </div>
-            </div>
-            <button onClick={() => setIsChatOpen(false)} className="text-[#bac9cc] hover:text-[#d9e2ff]">
-              <span className="material-symbols-outlined text-[20px]">close</span>
-            </button>
-          </div>
-          
-          <div className="h-80 overflow-y-auto p-4 space-y-4 bg-[#101b33]/90 flex flex-col">
-            {messages.map((msg, idx) => (
-              <div key={idx} className={`flex flex-col gap-1 max-w-[85%] ${msg.role === 'user' ? 'items-end self-end' : 'items-start self-start'}`}>
-                <div className={`p-3 rounded-2xl text-sm ${
-                  msg.role === 'user' 
-                    ? 'rounded-tr-none bg-[#00daf3]/20 border border-[#00daf3]/30 text-[#d9e2ff]' 
-                    : 'rounded-tl-none bg-[#2a344e]/50 border border-white/5 text-[#d9e2ff]'
-                }`}>
-                  {msg.content}
-                </div>
-                <span className="text-[10px] text-[#bac9cc]/50 mx-1">{msg.timestamp}</span>
-              </div>
-            ))}
-            
-            {/* Typing Indicator */}
-            {isTyping && (
-              <div className="flex flex-col items-start gap-1 max-w-[85%] self-start">
-                <div className="p-4 rounded-2xl rounded-tl-none bg-[#2a344e]/50 border border-white/5 flex gap-1">
-                  <span className="w-1.5 h-1.5 bg-[#00daf3] rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                  <span className="w-1.5 h-1.5 bg-[#00daf3] rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                  <span className="w-1.5 h-1.5 bg-[#00daf3] rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
-                </div>
-              </div>
-            )}
-            <div ref={chatEndRef} />
-          </div>
-          
-          <div className="p-4 bg-[#2a344e]/40 border-t border-white/10">
-            <div className="relative flex items-center gap-2">
-              <input 
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                disabled={isTyping}
-                className="w-full bg-[#07122a]/50 border border-white/10 rounded-full py-2 pl-4 pr-10 text-[#d9e2ff] text-sm focus:outline-none focus:border-[#00daf3] transition-all disabled:opacity-50" 
-                placeholder="Ask Quantum..." 
-                type="text"
-              />
-              <button 
-                onClick={handleSendMessage}
-                disabled={!chatInput.trim() || isTyping}
-                className="w-10 h-10 min-w-10 rounded-full bg-[#00daf3] text-[#00363d] flex items-center justify-center hover:scale-105 transition-transform hover:shadow-[0_0_15px_#00daf3] disabled:opacity-50 disabled:hover:scale-100"
-              >
-                <span className="material-symbols-outlined text-[20px]">send</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Floating Trigger Button */}
-        <button 
-          onClick={() => setIsChatOpen(!isChatOpen)}
-          className="w-14 h-14 rounded-full bg-gradient-to-br from-[#00daf3] to-[#d1bcff] flex items-center justify-center text-[#001f24] shadow-[0_0_20px_rgba(0,218,243,0.4)] hover:shadow-[0_0_30px_rgba(0,218,243,0.6)] hover:scale-110 transition-all duration-300 group"
-        >
-          <span className={`material-symbols-outlined text-[28px] transition-transform duration-300 ${isChatOpen ? 'rotate-90 scale-0 hidden' : 'rotate-0 scale-100'}`}>smart_toy</span>
-          <span className={`material-symbols-outlined text-[28px] transition-transform duration-300 absolute ${isChatOpen ? 'rotate-0 scale-100' : '-rotate-90 scale-0'}`}>close</span>
-        </button>
+    <main className="main-content">
+      <header className="topbar"><button className="icon-button mobile-menu" aria-label="Open navigation" onClick={() => setIsMobileNavOpen(true)}><Menu size={20} /></button><div className="breadcrumb"><span>Personal</span><ChevronRight size={15} /><strong>Overview</strong></div><div className="topbar-actions"><label className="search-field"><Search size={17} /><span className="sr-only">Search</span><input type="search" placeholder="Search your finances" /></label><button className="icon-button" aria-label="Notifications" title="Notifications"><span className="notification-dot" /><Clock3 size={19} /></button><button className="top-avatar" aria-label="Open profile">AM</button></div></header>
+      {isMobileNavOpen && <button className="nav-scrim" aria-label="Close navigation" onClick={() => setIsMobileNavOpen(false)} />}
+      <div className="content-wrap">
+        <section className="page-intro" id="overview"><div><p className="eyebrow">Monday, August 24, 2026</p><h1>Good morning, Alexander.</h1><p className="intro-copy">A clear view of your money, with the details ready when you need them.</p></div><div className="intro-actions"><button className="button button-secondary"><Download size={16} />Statement</button><button className="button button-primary"><Plus size={17} />New transfer</button></div></section>
+        <section className="metric-grid" aria-label="Account summary">
+          <article className="summary-card summary-card-featured"><div className="card-heading"><span className="card-kicker">Total balance</span><button className="icon-button small" aria-label="Balance options"><MoreHorizontal size={17} /></button></div><div className="balance">$582,430<span>.15</span></div><div className="balance-meta"><span className="positive"><ArrowUpRight size={15} />$8,240.50 (1.43%)</span><span>vs. last month</span></div><div className="balance-chart" aria-label="Balance increased steadily over six months"><div className="chart-line" /><div className="chart-months"><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span><span>Aug</span></div></div></article>
+          <article className="summary-card"><div className="card-heading"><span className="card-kicker">Available to spend</span><Wallet size={18} className="muted-icon" /></div><div className="small-balance">$124,500<span>.00</span></div><div className="progress-track"><div className="progress-value" /></div><div className="card-foot"><span>Daily account</span><span>82% available</span></div></article>
+          <article className="summary-card"><div className="card-heading"><span className="card-kicker">Investments</span><TrendingUp size={18} className="muted-icon" /></div><div className="small-balance">$457,930<span>.15</span></div><div className="card-foot investment-foot"><span className="positive"><ArrowUpRight size={15} />8.1% YTD</span><span>View portfolio <ChevronRight size={14} /></span></div><div className="mini-bars" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /></div></article>
+        </section>
+        <section className="section-grid">
+          <article className="panel transactions-panel" id="transactions"><div className="panel-header"><div><p className="eyebrow">Activity</p><h2>Recent transactions</h2></div><button className="text-button">View all <ChevronRight size={15} /></button></div><div className="transaction-list">{transactions.map((transaction) => { const Icon = transaction.icon; return <div className="transaction-row" key={transaction.merchant}><div className="transaction-icon"><Icon size={18} /></div><div className="transaction-details"><strong>{transaction.merchant}</strong><span>{transaction.category} · {transaction.date}</span></div><div className="transaction-amount"><strong className={transaction.amount.startsWith('+') ? 'positive' : ''}>{transaction.amount}</strong><span className={transaction.status === 'Pending' ? 'status pending' : 'status'}>{transaction.status === 'Pending' ? <Clock3 size={12} /> : <Check size={12} />}{transaction.status}</span></div></div>; })}</div></article>
+          <article className="panel insights-panel" id="investments"><div className="panel-header"><div><p className="eyebrow">Nexus intelligence</p><h2>Worth knowing</h2></div><div className="insight-orb"><Sparkles size={18} /></div></div><div className="insight-copy"><h3>Your cash is working harder.</h3><p>Moving $15,000 from your daily account to your high-yield reserve could earn an estimated <strong>$612 more</strong> over the next year.</p></div><button className="button button-dark">Review suggestion <ArrowUpRight size={16} /></button><div className="insight-note"><ShieldCheck size={15} />Based on your 6-month cash flow</div></article>
+        </section>
+        <section className="bottom-grid" id="security"><article className="panel score-panel"><div><p className="eyebrow">Financial health</p><h2>Strong position</h2><p className="muted-copy">Your habits are building a resilient financial foundation.</p></div><div className="score-ring"><strong>842</strong><span>of 1000</span></div><div className="score-footer"><span><span className="score-dot" />Excellent</span><button className="text-button">See details <ChevronRight size={15} /></button></div></article><article className="panel security-panel"><div className="security-icon"><ShieldCheck size={22} /></div><div><p className="eyebrow">Account security</p><h2>Everything looks good</h2><p className="muted-copy">Last checked 4 minutes ago. No unusual activity detected.</p></div><button className="icon-button" aria-label="Security details"><ChevronRight size={18} /></button></article></section>
       </div>
-    </div>
-  );
+    </main>
+
+    <div className={`concierge ${isChatOpen ? 'concierge-open' : ''}`} role="dialog" aria-label="Nexus AI concierge" aria-hidden={!isChatOpen}><div className="concierge-header"><div className="concierge-title"><div className="bot-avatar"><Bot size={17} /></div><div><strong>AI concierge</strong><span>Here to help</span></div></div><button className="icon-button" aria-label="Close concierge" onClick={() => setIsChatOpen(false)}><X size={18} /></button></div><div className="messages" aria-live="polite">{messages.map((message, index) => <div className={`message ${message.role}`} key={`${message.timestamp}-${index}`}><p>{message.content}</p><span>{message.timestamp}</span></div>)}{isTyping && <div className="typing" aria-label="AI is typing"><i /><i /><i /></div>}<div ref={chatEndRef} /></div><form className="message-form" onSubmit={(event) => { event.preventDefault(); void handleSendMessage(); }}><label className="sr-only" htmlFor="concierge-input">Ask your concierge</label><input id="concierge-input" value={chatInput} onChange={(event) => setChatInput(event.target.value)} placeholder="Ask about your finances" disabled={isTyping} /><button className="send-button" aria-label="Send message" disabled={!chatInput.trim() || isTyping}><Send size={16} /></button></form></div>
+    <button className="concierge-trigger" aria-label={isChatOpen ? 'Close AI concierge' : 'Open AI concierge'} onClick={() => setIsChatOpen((open) => !open)}>{isChatOpen ? <X size={21} /> : <Bot size={21} />}<span>{isChatOpen ? 'Close' : 'Ask Nexus'}</span></button>
+  </div>;
 }
