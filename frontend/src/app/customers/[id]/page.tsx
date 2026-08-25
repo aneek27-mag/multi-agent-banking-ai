@@ -1,6 +1,5 @@
-import { notFound } from 'next/navigation';
 import { BankingShell } from '../../../components/BankingShell';
-import { Customer360View } from '../../../components/CustomerIntelligence';
+import { Customer360Loader } from '../../../components/CustomerIntelligence';
 import { customerRecords } from '../../../data/customers';
 
 export function generateStaticParams() {
@@ -9,7 +8,5 @@ export function generateStaticParams() {
 
 export default async function CustomerPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const customer = customerRecords.find((record) => record.id === id);
-  if (!customer) notFound();
-  return <BankingShell activePath="/customers"><Customer360View customer={customer} /></BankingShell>;
+  return <BankingShell activePath="/customers"><Customer360Loader id={id} /></BankingShell>;
 }

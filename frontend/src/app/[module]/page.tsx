@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
-import { BankingShell, ModulePlaceholder, moduleCopy } from '../../components/BankingShell';
+import { BankingShell, ModulePlaceholder } from '../../components/BankingShell';
+import { moduleCopy } from '../../data/modulePlaceholders';
 
 export function generateStaticParams() {
   return Object.keys(moduleCopy).map((module) => ({ module }));
